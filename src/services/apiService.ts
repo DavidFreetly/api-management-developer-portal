@@ -1,3 +1,4 @@
+import { Hostname } from "./../contracts/hostname";
 import * as Constants from "../constants";
 import { TagContract } from "./../contracts/tag";
 import { ProductContract } from "./../contracts/product";
@@ -402,9 +403,9 @@ export class ApiService {
 
     private getSchemasType(schemas: SchemaContract[]): SchemaType {
         if (schemas && schemas.length > 0) {
-            const is2 = !!schemas.find(item => item.properties.contentType === SchemaType.swagger) 
-                        &&
-                        !schemas.find(item => item.properties.contentType === SchemaType.openapi);
+            const is2 = !!schemas.find(item => item.properties.contentType === SchemaType.swagger)
+                &&
+                !schemas.find(item => item.properties.contentType === SchemaType.openapi);
             if (is2) {
                 return SchemaType.swagger;
             }
@@ -419,7 +420,7 @@ export class ApiService {
             throw new Error(`Parameter "apiId" not specified.`);
         }
 
-        const cachedApi = this.lastApiProducts[apiId];
+        let cachedApi = this.lastApiProducts[apiId];
 
         if (!cachedApi) {
             // clean cache if apiId changed
@@ -467,5 +468,13 @@ export class ApiService {
         page.nextLink = result.nextLink;
 
         return page;
+    }
+
+    public async getApiHostnames(apiName: string): Promise<string[]> {
+        const query = `apis/${apiName}/hostnames`;
+        const pageOfHostnames = await this.mapiClient.get<Page<Hostname>>(query);
+        const hostnameValues = pageOfHostnames.value.map(x => x.value);
+
+        return hostnameValues;
     }
 }
