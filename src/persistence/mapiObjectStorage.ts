@@ -292,10 +292,11 @@ export class MapiObjectStorage implements IObjectStorage {
 
         let armContract = this.convertPaperbitsContractToArmContract(paperbitsContract);
 
+        delete armContract["id"];
+
         let exists: boolean;
 
         try {
-
             if (key.contains("settings") || key.contains("styles")) {
                 armContract = { nodes: [armContract] };
             }
