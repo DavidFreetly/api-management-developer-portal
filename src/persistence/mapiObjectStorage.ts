@@ -26,6 +26,30 @@ export class MapiObjectStorage implements IObjectStorage {
         throw new Error(`Could not determine content type by resource: ${resource}`);
     }
 
+    private delocalizeBlock(contract: any): void {
+        contract.contentKey = contract["locales"]["en-us"]["contentKey"];
+        contract.title = contract["locales"]["en-us"]["title"];
+        contract.description = contract["locales"]["en-us"]["description"];
+        contract.type = contract["locales"]["en-us"]["type"];
+
+        delete contract["locales"];
+    }
+
+    private localizeBlock(contract: any): void {
+        contract.locales = {
+            "en-us": {
+                contentKey: contract.contentKey,
+                title: contract.title,
+                description: contract.description,
+                type: contract.type
+            }
+        };
+
+        delete contract["contentKey"];
+        delete contract["title"];
+        delete contract["description"];
+    }
+
     public armResourceToPaperbitsKey(resource: string): string {
         if (!resource.contains("contentTypes")) {
             return resource;
@@ -200,6 +224,10 @@ export class MapiObjectStorage implements IObjectStorage {
             const item = await this.mapiClient.get<T>(`${resource}`);
             const converted = this.convertArmContractToPaperbitsContract(item, isLocalized);
 
+            if (key.startsWith("blocks/")) {
+                this.delocalizeBlock(converted);
+            }
+
             if (key === "locales") {
                 return <any>{
                     key: `contentTypes/locales/contentItem/en_us`,
@@ -249,6 +277,10 @@ export class MapiObjectStorage implements IObjectStorage {
 
         if (isLocalized) {
             const locale = selectedLocale.replace("_", "-");
+
+            if (key.startsWith("blocks/")) {
+                this.localizeBlock(dataObject);
+            }
 
             paperbitsContract = {
                 [selectedLocale]: dataObject["locales"][locale]
@@ -316,6 +348,11 @@ export class MapiObjectStorage implements IObjectStorage {
 
                 for (const filter of query.filters) {
                     const operator = filter.operator;
+
+                    if (resource.startsWith("contentTypes/block/contentItems")) {
+                        filter.left = `en_us/${filter.left}`;
+                    }
+
                     filter.left = filter.left.replace("locales/en-us/", "en_us/");
 
                     switch (operator) {
@@ -346,6 +383,10 @@ export class MapiObjectStorage implements IObjectStorage {
 
                 for (const item of pageOfTs.value) {
                     const converted = this.convertArmContractToPaperbitsContract(item, isLocalized);
+
+                    if (resource.startsWith("contentTypes/block/contentItems")) {
+                        this.delocalizeBlock(converted);
+                    }
 
                     const segments = converted.key.split("/");
                     const key = segments[1];
